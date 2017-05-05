@@ -1,0 +1,346 @@
+---
+title: "tidyverse Demo Using Biological Data"
+author: "Yixf (Yi Xianfu)"
+date: "March 25, 2017"
+output: 
+  html_document: 
+    number_sections: yes
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Step0 - Before analysis
+## Think twice before acting
+* What you have?
+    * What is the meaning of data?
+    * What is the meaning for rows?
+    * What is the meaning for each column?
+* What you want?
+    * Which rows do you want to keep?
+    * Which columns do you want to keep?
+    * What do you want to add based on the data?
+
+## Translate biological data into computer information
+* Understand data
+    * Row: observation or case or record
+    * Column: variable
+* Understand analysis
+    * Keep rows: filter observations
+    * Keep columns: select variables
+    * Format data
+        * Sort by column(s): arrange
+        * Add new column(s): mutate
+        * Summary, rename, intersect, join, ...
+        
+## Computer tools
+* R (Opts: Python, Perl, shell, ...)
+* Rstudio
+* tidyverse
+    * readr
+    * tidyr
+    * dplyr
+    * stringr
+    * ggplot2
+
+# Step1 - Analysis
+## Load packages
+If tidyverse has been installed, it can been loaded:
+```{r, message=FALSE, warning=TRUE}
+#library(tidyverse)
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+dir.create("output_r", showWarnings=FALSE)
+```
+
+## Pgen
+### Read in data and understand it
+```{r}
+library(readxl)
+pgen <- read_excel("pgen.xlsx")
+#pgen <- read_tsv("pgen.tsv")
+glimpse(pgen)
+summary(pgen)
+#View(pgen)
+#str(pgen)
+head(pgen)
+tail(pgen)
+sample_n(pgen, 10)
+```
+
+For every function that you do not familar, you can read its help/manual:
+```{r, eval=FALSE}
+?str
+?glimpse
+```
+
+### Tasks to do
+1. Keep SNP records, discard CNV records
+2. Discard some columns and arrange the remaining columns, format chromosome to "chrN"
+3. Class records according to distanceTSS (20kb, 50kb)
+4. Compare the rho value between groups
+
+### Analysis
+#### Step-by-step
+```{r, message=FALSE}
+dir_out <- "output_r"
+pgen.0 <- pgen %>% rename(posSNP=`posSNP(hg18)`, posTSS=`posTSS(hg18)`)
+pgen.1 <- pgen.0 %>% filter(str_detect(SNP, "^rs"))
+pgen.2 <- pgen.1 %>% select(SNP, gene, chr=chrSNP, posSNP:pvalue) %>% mutate(chr=paste0("chr", chr))
+pgen.3 <- pgen.2 %>% mutate(group=ifelse(distanceTSS>=50000, "Large", ifelse(distanceTSS>=20000, "Middle", "Small")))
+write_tsv(pgen.3, file.path(dir_out, "pgen_brief.tsv"))
+ggplot(pgen.3, aes(group, rho, color=group)) + geom_boxplot()
+ggsave(file.path(dir_out, "pgen_rho.png"))
+```
+
+#### All-in-one
+We can do this analysis all-in-one:
+
+* From the beginning to the end like a pipeline or workflow
+* Save resources by not using intermediate variables
+* Can be extracted to a function for reuse
+
+```{r}
+pgen %>% rename(posSNP=`posSNP(hg18)`, posTSS=`posTSS(hg18)`) %>% 
+  filter(str_detect(SNP, "^rs")) %>% 
+  select(SNP, gene, chr=chrSNP, posSNP:pvalue) %>% mutate(chr=paste0("chr", chr)) %>% 
+  mutate(group=ifelse(distanceTSS>=50000, "Large", ifelse(distanceTSS>=20000, "Middle", "Small"))) %>% ggplot(aes(group, rho, color=group)) + geom_boxplot()
+```
+
+### Perl solution
+You must have a bird's-eye view because data are processed row by row.
+```{perl, eval=FALSE}
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+my $dir_out = "output_perl";
+mkdir $dir_out unless -d $dir_out;
+my $fi      = "pgen.tsv";
+my $fo      = "$dir_out/pgen_brief.tsv";
+open my $I, '<', $fi or die "$0 : failed to open input file '$fi' : $!\n";
+open my $O, '>', $fo or die "$0 : failed to open output file '$' : $!\n";
+select $O;
+print join "\t", "SNP", "gene", "chr", "posSNP", "posTSS", "distanceTSS", "rho", "pvalue", "group";
+print "\n";
+
+while (<$I>) {
+    if (/^rs\d+/) {
+        my @fields = split /\t/;
+        my $chr    = "chr" . $fields[3];
+        my $group =
+          $fields[7] >= 50000
+          ? "Large"
+          : ( $fields[7] >= 20000 ? "Middle" : "Small" );
+        print join "\t", $fields[0], $fields[2], $chr, @fields[ 5 .. 9 ], $group;
+        print "\n";
+    }
+}
+close $I or warn "$0 : failed to close input file '$fi' : $!\n";
+close $O or warn "$0 : failed to close output file '$' : $!\n";
+```
+
+## Genes
+### Read in data and understand it
+```{r}
+genes <- read_tsv("genes.tsv")
+glimpse(genes)
+summary(genes)
+```
+
+### Tasks to do
+1. Drop records whose NCBI or HGNC or Ensembl ID is `NA`
+2. Keep columns (PharmGKB, NCBI, Name, Symbol, Chr, Start, End)
+3. Calaculate the length based on start and end of the chromosome
+4. Arrange the columns
+5. Plot the length distribution
+6. Compara the numbers between chromosomes
+    * data: sort by numbers from high to low
+    * plot
+7. Save data and plot
+
+### Analysis
+#### Step-by-step
+```{r, message=FALSE}
+dir_out <- "output_r"
+genes.0 <- genes %>% rename(PharmGKB=`PharmGKB Accession Id`, NCBI=`NCBI Gene ID`, HGNC=`HGNC ID`, Ensembl=`Ensembl Id`, AltName=`Alternate Names`, AltSym=`Alternate Symbols`, Vip=`Is VIP`, Annotate=`Has Variant Annotation`, Ref=`Cross-references`, Guide=`Has CPIC Dosing Guideline`, Chr=Chromosome, Start=`Chromosomal Start`, End=`Chromosomal Stop`)
+#ens_err <- genes.0 %>% filter(!str_detect(Ensembl, "^E\\w+\\d$") | is.na(Ensembl))
+genes.1 <- genes.0 %>% drop_na(NCBI, HGNC, Ensembl)
+genes.2 <- genes.1 %>% select(PharmGKB, NCBI, Name, Symbol, Chr, Start, End)
+genes.3 <- genes.2 %>% mutate(Length=End-Start)
+genes.4 <- genes.3 %>% select(PharmGKB, NCBI, Symbol:Length, Name)
+write_tsv(genes.4, file.path(dir_out, "genes_brief.tsv"))
+ggplot(genes.4, aes(Length)) + geom_density()
+ggsave(file.path(dir_out, "length_distribution.png"))
+ggplot(genes.4, aes(Chr)) + geom_bar()
+ggsave(file.path(dir_out, "chr_number_barplot.png"))
+chr_count <- genes.4 %>% group_by(Chr) %>% summarise(Count=n()) %>% arrange(desc(Count))
+write_tsv(chr_count, file.path(dir_out, "genes_chr_number.tsv"))
+```
+
+#### All-in-one
+```{r}
+genes %>% rename(PharmGKB=`PharmGKB Accession Id`, NCBI=`NCBI Gene ID`, HGNC=`HGNC ID`, Ensembl=`Ensembl Id`, AltName=`Alternate Names`, AltSym=`Alternate Symbols`, Vip=`Is VIP`, Annotate=`Has Variant Annotation`, Ref=`Cross-references`, Guide=`Has CPIC Dosing Guideline`, Chr=Chromosome, Start=`Chromosomal Start`, End=`Chromosomal Stop`) %>% 
+  drop_na(NCBI, HGNC, Ensembl) %>% 
+  select(PharmGKB, NCBI, Name, Symbol, Chr, Start, End) %>% 
+  mutate(Length=End-Start) %>% 
+  select(PharmGKB, NCBI, Symbol:Length, Name) %>% 
+  ggplot(aes(Chr)) + geom_bar()
+```
+
+### Perl solution
+```{perl, eval=FALSE}
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+my $dir_out    = "output_perl";
+mkdir $dir_out unless -d $dir_out;
+my $file_genes = "genes.tsv";
+my $file_out   = "$dir_out/genes_brief.tsv";
+open my $I, '<', $file_genes or die "$0 : failed to open input file '$file_genes' : $!\n";
+open my $O, '>', $file_out or die "$0 : failed to open output file '$file_out' : $!\n";
+select $O;
+print join "\t", "PharmGKB", "NCBI", "Symbol", "Chr", "Start", "End", "Length", "Name";
+print "\n";
+my %number;
+
+while (<$I>) {
+    chomp;
+    unless (/^Pham/) {
+        my @fields = split /\t/;
+        if ( $fields[1] =~ /\d/ && $fields[2] =~ /\d/ && $fields[3] =~ /\w/ ) {
+            my $length = $fields[-1] - $fields[-2];
+            $number{ $fields[-3] }++;
+            print join "\t", @fields[ 0, 1, 5, -3, -2, -1 ], $length, $fields[4];
+            print "\n";
+        }
+    }
+}
+close $I or warn "$0 : failed to close input file '$file_genes' : $!\n";
+close $O or warn "$0 : failed to close output file '$file_out' : $!\n";
+
+my $file_number = "$dir_out/genes_chr_num.tsv";
+open my $ON, '>', $file_number or die "$0 : failed to open output file '$file_number' : $!\n";
+select $ON;
+print "Chr\tCount\n";
+foreach my $key ( sort { $number{$b} <=> $number{$a} } keys %number ) {
+    print "$key\t$number{$key}\n";
+}
+close $ON or warn "$0 : failed to close output file '$file_number' : $!\n";
+```
+
+## Phewas
+### Read in data and understand it
+```{r}
+phewas <- read_csv("phewas.csv", na=c("", "NA", "NULL"))
+glimpse(phewas)
+summary(phewas)
+```
+
+### Tasks to do
+1. Drop records whose position is missing or gene name is NULL
+2. Split chromosome and position, and format chromosome to "chrN"
+3. Keep records whose cases number is more than 100 and its odds ratio is great than 1
+4. Discard column codes and arrange remaining columns
+5. Find the top 15 genes which have the most SNPs
+    1. Count the SNP number for each gene
+    2. Select the top 15 genes according to SNP number
+    3. Restore the SNP infomation for these genes
+
+### Analysis
+#### Step-by-step
+```{r}
+dir_out <- "output_r"
+phewas.0 <- phewas %>% rename(chrom=chromosome, phenotype=`phewas phenotype`, pvalue=`p-value`, ratio=`odds-ratio`, gene=gene_name, code=`phewas code`, gwas=`gwas-associations`)
+phewas.1 <- phewas.0 %>% filter(str_detect(chrom, "\\w\\s\\d")) %>% drop_na(gene)
+phewas.2 <- phewas.1 %>% separate(chrom, into=c("chr", "pos")) %>% mutate(chr=paste0("chr", chr))
+phewas.3 <- phewas.2 %>% filter(cases>=100 & ratio>=1)
+phewas.4 <- phewas.3 %>% select(chr:snp, cases:gene, phenotype, gwas)
+write_csv(phewas.4, file.path(dir_out, "phewas_brief.csv"))
+gene_snp <- phewas.4 %>% group_by(gene) %>% summarise(number=n()) %>% top_n(15, number) %>% arrange(desc(number))
+top15_gene <- inner_join(phewas.4, gene_snp) %>% arrange(desc(number))
+write_csv(top15_gene, file.path(dir_out, "top15_gene.csv"))
+```
+
+#### All-in-one
+```{r}
+phewas.brief <- phewas %>% rename(chrom=chromosome, phenotype=`phewas phenotype`, pvalue=`p-value`, ratio=`odds-ratio`, gene=gene_name, code=`phewas code`, gwas=`gwas-associations`) %>%
+  filter(str_detect(chrom, "\\w\\s\\d")) %>% drop_na(gene) %>% 
+  separate(chrom, into=c("chr", "pos")) %>% mutate(chr=paste0("chr", chr)) %>% 
+  filter(cases>=100 & ratio>=1) %>% 
+  select(chr:snp, cases:gene, phenotype, gwas)
+top15_gene <- phewas.brief %>% group_by(gene) %>% summarise(number=n()) %>% top_n(15, number) %>% 
+  inner_join(phewas.brief, .) %>% arrange(desc(number))
+
+```
+
+### Perl solution
+```{perl, eval=FALSE}
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+use Text::CSV;
+my $csv = Text::CSV->new( { binary => 1 } ) or die "Cannot use CSV: " . Text::CSV->error_diag();
+
+my $dir_out  = "output_perl";
+mkdir $dir_out unless -d $dir_out;
+my $file_in  = "phewas.csv";
+my $file_out = "$dir_out/phewas_brief.csv";
+open my $I, '<:encoding(utf8)', $file_in or die "$0 : failed to open input file '$file_in' : $!\n";
+open my $O, '>:encoding(utf8)', $file_out or die "$0 : failed to open output file '$' : $!\n";
+my @header;
+push @header, "chr", "pos", "snp", "cases", "pvalue", "ratio", "gene", "pehnotype", "gwas";
+$csv->say( $O, \@header );
+my %gene;
+
+while ( my $row = $csv->getline($I) ) {
+    my @fields = @$row;
+    if ( $fields[0] =~ /\w\s\d/ && $fields[6] ne "NULL" ) {
+        if ( $fields[3] >= 100 && $fields[5] >= 1 ) {
+            my ( $chr, $pos ) = split /\s+/, $fields[0];
+            $chr = "chr" . $chr;
+            my $value = join "\t", $chr, $pos, $fields[1], @fields[ 3 .. 6 ], $fields[2], $fields[-1];
+            my @record = split /\t/, $value;
+            $csv->say( $O, \@record );
+            push @{ $gene{ $fields[6] } }, $value;
+        }
+    }
+}
+$csv->eof or $csv->error_diag();
+close $I  or warn "$0 : failed to close input file '$file_in' : $!\n";
+close $O  or warn "$0 : failed to close output file '$file_out' : $!\n";
+
+my $file_gene = "$dir_out/top15_gene.csv";
+open my $G, '>:encoding(utf8)', $file_gene or die "$0 : failed to open output file '$file_gene' : $!\n";
+push @header, "number";
+$csv->say( $G, \@header );
+my $i = 15;
+foreach my $key ( sort { @{ $gene{$b} } <=> @{ $gene{$a} } } keys %gene ) {
+    if ( $i > 0 ) {
+        foreach my $snp ( @{ $gene{$key} } ) {
+            my @record = split /\t/, $snp;
+            push @record, scalar( @{ $gene{$key} } );
+            $csv->say( $G, \@record );
+        }
+    }
+    $i--;
+}
+close $G or warn "$0 : failed to close output file '$file_gene' : $!\n";
+```
+
+# Step2 - Save session information
+It is a good habit to save current session information, for checking, reproducing, and everything. 
+```{r}
+sessionInfo()
+```
+
