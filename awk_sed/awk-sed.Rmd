@@ -1,0 +1,313 @@
+---
+title: "awk and sed Demo Using Biological Data"
+author: "Yixf (Yi Xianfu)"
+date: "March 25, 2017"
+output: 
+  html_document: 
+    number_sections: yes
+    toc: yes
+---
+
+
+```{r}
+Sys.setenv(fi='gene_hg38_chrM_chrY.bed')
+```
+
+
+# Understand the data
+Before you deal with the file/data, you must understand it, from basic information to details. For example, its owner, mode, size, an other basic information:
+```{bash comment=NA}
+ls -lh $fi
+```
+
+and its format:
+```{bash comment=NA}
+file $fi
+```
+
+and its line number:
+```{bash comment=NA}
+wc -l $fi
+```
+
+and its head and tail lines:
+```{bash comment=NA}
+head -n 3 $fi
+tail -n 3 $fi
+```
+
+
+# AWK demo
+## Extract column(s)
+### Examples
+You can extract/print one column:
+```{bash comment=NA}
+awk '{print $4}' $fi | head -n 3
+```
+or several columns:
+```{bash comment=NA}
+awk '{print $1,$4}' $fi | head -n 3
+```
+or all columns (whole line):
+```{bash comment=NA}
+awk '{print $0}' $fi | head -n 3
+```
+### Take home message
+* AWK statments are included in `''`
+* Whole line are refered by `$0`
+* The first, second, third columns are refered by `$1`, `$2`, `$3`, ...
+
+## Filter lines
+### Examples
+You can use condition(s) to filter lines:
+```{bash comment=NA}
+awk '$2>5000 && $3<9000' $fi
+```
+and print column(s) the samt time:
+```{bash comment=NA}
+awk '($2>5000 && $3<9000) {print $4}' $fi
+```
+If you want to know the line number:
+```{bash comment=NA}
+awk '($1=="chrM" && $2>5000 && $3<9000) {print NR,$4}' $fi
+```
+### Take home message
+* Operator: `==`, `!=`, `>`, `<`, `>=`, `<=`
+* Build-in variables
+    * `FILENAME`
+    * `FS`, (input) Field Separator
+    * `OFS`, Output Field Separator
+    * `RS`, (input) Record Separator
+    * `ORS`, Output Record Separator
+    * `NF`, (total) Number of Fields
+    * `NR`, Number of (input) Records
+
+## Use different separator
+You can use separator different from the default (Tab or Space):
+```{bash comment=NA}
+awk 'BEGIN{FS=":"} {print $1,$7}' /etc/passwd | tail -n 2
+```
+It can be simply:
+```{bash comment=NA}
+awk -F: '{print $1,$7}' /etc/passwd | tail -n 2
+```
+Of course, you can use more than one separators and use a different output field separator:
+```{bash comment=NA}
+awk -F '[;:]' '{print $1,$7}' OFS="\t" /etc/passwd | tail -n 2
+```
+
+## Pattern match
+You can use patterns to filter lines:
+```{bash comment=NA}
+awk '$1 ~ /M/ {print NR,$1,$2,$3,$4}' OFS="\t" $fi | tail -n 3
+```
+or the pattern on whole line:
+```{bash comment=NA}
+awk '/M/ {print NR,$1,$2,$3,$4}' OFS="\t" $fi | tail -n 3
+```
+Of course, you can reverse the match:
+```{bash comment=NA}
+awk '$1 !~ /M/ {print NR,$1,$2,$3,$4}' OFS="\t" $fi | tail -n 3
+```
+and:
+```{bash comment=NA}
+awk '!/M/ {print NR,$1,$2,$3,$4}' OFS="\t" $fi | tail -n 3
+```
+
+## Split file
+You can split file according to one column:
+```{bash comment=NA}
+awk '{print > $1}' $fi
+```
+Of course, you can specify the prefix and suffix:
+```{bash comment=NA}
+awk '{print > "hg38_"$1".bed"}' $fi
+```
+If you want several columns:
+```{bash comment=NA}
+awk '{print $1,$4,$6 > $1}' $fi
+```
+The more complicate example using if-else:
+```{bash comment=NA}
+awk '{if($4 ~ /NM|XM/) print > "coding.txt"; 
+     else if($4 ~ /NR|XR/) print > "noncoding.txt";
+     else print > "others.txt" }' $fi
+```
+
+## Math
+You can do math, for example, calculate the length of genes:
+```{bash comment=NA}
+awk '{len=$3-$2;} {print $4,len}' $fi | head -n 3
+```
+or total length:
+```{bash comment=NA}
+head -n 3 $fi | awk '{len=$3-$2;sum+=len;print $4,len} END {print "Total",sum}'
+```
+Cal the gene number on each chromosome:
+```{bash comment=NA}
+awk '{a[$1]++;} END {for (i in a) print i ": " a[i];}' $fi
+```
+
+## Use AWK script
+We when to deal with the `score.txt` file:
+```{bash comment=NA}
+#cat score.txt
+awk '{print}' OFS="\t" score.txt
+```
+Write the script `cal.awk`:
+```{bash eval=FALSE}
+#!/bin/awk
+#Before running each line
+BEGIN {
+    math = 0
+    english = 0
+    computer = 0
+    printf "NAME    NO.   MATH  ENGLISH  COMPUTER   TOTAL\n"
+    printf "---------------------------------------------\n"
+}
+#Runing each line
+{
+    math+=$3
+    english+=$4
+    computer+=$5
+    printf "%-6s %-6s %4d %8d %8d %8d\n", $1, $2, $3, $4, $5, $3+$4+$5
+}
+#After running each line
+END {
+    printf "---------------------------------------------\n"
+    printf "  TOTAL:%10d %8d %8d \n", math, english, computer
+    printf "AVERAGE:%10.2f %8.2f %8.2f\n", math/NR, english/NR, computer/NR
+}
+```
+Then run it:
+```{bash comment=NA}
+awk -f cal.awk score.txt
+```
+
+## References
+* [AWK简明教程](http://coolshell.cn/articles/9070.html)
+* [The GNU Awk User’s Guide](https://www.gnu.org/software/gawk/manual/gawk.html)
+* `man awk`, `awk -h`, `awk --help`
+* *Effective awk Programming: Universal Text Processing and Pattern Matching*
+
+
+# sed demo
+## Substitute
+### Examples
+Replace each `chrM` with `chrMt`:
+```{bash comment=NA}
+sed "s/chrM/chrMt/g" $fi | head -n 3
+```
+and save the result to a new file:
+```{bash comment=NA}
+sed "s/chrM/chrMt/g" $fi > mt.bed
+```
+or modify the original file (**be careful**):
+```{bash comment=NA}
+#sed -i "s/chrM/chrMt/g" $fi
+```
+Add something to the begining and end of every line:
+```{bash comment=NA}
+sed "s/^/#/g" $fi | head -n 3
+sed "s/$/###/g" $fi | head -n 3
+```
+You can do substitution on certain line:
+```{bash comment=NA}
+sed "2s/chrM/chrMt/g" $fi | head -n 3
+```
+or lines:
+```{bash comment=NA}
+sed "2,4s/chrM/chrMt/g" $fi | head -n 5
+```
+You can substitute the first case:
+```{bash comment=NA}
+sed "s/0/X/1" $fi | head -n 1
+```
+or second case:
+```{bash comment=NA}
+sed "s/0/X/2" $fi | head -n 1
+```
+or cases after the third:
+```{bash comment=NA}
+sed "s/0/X/3g" $fi | head -n 1
+```
+### Take home message
+Regular expression:
+* `^`: beginning of line
+* `$`: end of line
+* `\<`: beginning of word
+* `\>`: end of word
+* `.`: single character
+* `*`: zero or more times
+* `[]`: character set
+
+## Multi-match
+You can do several substitutions at the same time:
+```{bash comment=NA}
+sed "1,2s/chrM/chrMt/; 4,5s/chrM/M/" $fi | head -n 5
+```
+The same effect:
+```{bash comment=NA}
+sed -e "1,2s/chrM/chrMt/" -e "4,5s/chrM/M/" $fi | head -n 5
+```
+You can add something to the matching string using `&`:
+```{bash comment=NA}
+sed "s/\+/(&)/g" $fi | head -n 2
+```
+And you can use the match variable with `()`:
+```{bash comment=NA}
+sed "s/^\(chr\w\+\)\s\+\([[:digit:]]\+\)\s\+\([[:digit:]]\+\).\+\([+-]\).\+$/\1:\2-\3:\4/" $fi | head -n 3
+```
+
+## Command
+`i` is used to insert:
+```{bash comment=NA}
+sed "1 i #This is a BED file" $fi | head -n 3
+```
+`a` is used to append:
+```{bash comment=NA}
+sed "1 a #The following is a BED line" $fi | head -n 3
+```
+Of course, you can use pattern match:
+```{bash comment=NA}
+sed "/chrM/ a #The line above is on chromosome M" $fi | head -n 6
+```
+`c` is used to change:
+```{bash comment=NA}
+sed "/chrM/ c #chrM lines are commented" $fi | head -n 3
+```
+`d` is used to delete:
+```{bash comment=NA}
+sed "/chrM/ d" $fi | head -n 3
+```
+`p` is used to print:
+```{bash comment=NA}
+sed -n "/chrM/ p" $fi | head -n 3
+```
+You can use pattern matching to locate:
+```{bash comment=NA}
+sed -n "/chrM/,/chrY/ p" $fi | tail -n 3
+```
+Or mix the line number and pattern matching:
+```{bash comment=NA}
+sed -n "10,/chrY/ p" $fi | tail -n 3
+```
+Use pattern matching with following lines:
+```{bash comment=NA}
+sed "/3306/,+2 s/^/#/g" $fi | head -n 5
+```
+You can use several commands at the same time:
+```{bash comment=NA}
+sed "10,15 {/chrY/{/NR/d}}" $fi | head -n 15 | tail -n 5
+```
+Another example:
+```{bash comment=NA}
+sed "1,15 {/chrM/d;s/\+/+1/g}" $fi | head -n 3
+```
+
+## References
+* [sed简明教程](http://coolshell.cn/articles/9104.html)
+* [sed, a stream editor](https://www.gnu.org/software/sed/manual/sed.html)
+* `man sed`, `sed --help`
+* *sed ＆ awk: UNIX Power Tools*
+* *sed and awk Pocket Reference: Text Processing with Regular Expressions*
