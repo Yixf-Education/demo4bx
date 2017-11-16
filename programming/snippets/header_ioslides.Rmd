@@ -1,0 +1,13 @@
+---
+title: "如何编写程序？"
+subtitle: "三思而后行"
+author: "伊现富(Yi Xianfu)"
+date: '2017-11-18'
+output:
+  ioslides_presentation: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval=FALSE)
+```
+
