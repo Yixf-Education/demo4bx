@@ -152,7 +152,7 @@ conda create -h
     - `< > <= >= == !=`: 针对版本号的运算
     ```{bash}
 conda install bedtools=2.20 # 2.20*
-conda install bedtools=2.20.1 # 2.20.1
+conda install bedtools==2.20.1 # 2.20.1
     ```
 
 ## conda：高级应用（续）
