@@ -1,0 +1,13 @@
+---
+title: "生物信息学软件的安装与维护"
+subtitle: "人生苦短，我用conda"
+author: "伊现富(Yi Xianfu)"
+date: '2017-11-18'
+output:
+  ioslides_presentation: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval=FALSE)
+```
+
