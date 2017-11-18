@@ -34,11 +34,11 @@ knitr::opts_chunk$set(eval=FALSE)
 ## 了解背景知识：miRNA的作用方式——种子区域
 ![](figures/seed.png)
 
+## 任务需求的具体化——辅助示意图
+![](figures/miRNA_regions.png)
+
 ## 理解输入数据：文件格式及数据信息
 ![](figures/miRNA_pri_mature.png)
-
-## 整合输入数据与任务需求——辅助示意图
-![](figures/miRNA_regions.png)
 
 ## 整合输入数据与任务需求——实例解析
 ![](figures/regions_plus1.png)
@@ -75,11 +75,11 @@ foreach line
         cal_minus
 
 sub cal_plus
-    cal_plus_AorC
+    cal_plus_AandC
     cal_plus_B
 
 sub cal_minus
-    cal_minus_AorC
+    cal_minus_AandC
     cal_minus_B
 ```
 
@@ -95,7 +95,8 @@ define_ps
 
 cal_plus/minus
     in: ps and S and E
-    call cal_plus/minus_B
+    calculate A,C
+    B = call cal_plus/minus_B
     out: coordinate of A,B,C
 
 cal_plus/minus_B
@@ -105,7 +106,7 @@ cal_plus/minus_B
 
 ## 编写最终的程序——从思考到编程
 - 编写程序并进行调试
-    1. 规划好最终的输出形式
+    1. 规划好最终的输出形式（行，列，附加信息，等）
     2. 用自己熟悉的编程语言编写程序
     3. 对照实例结果校验程序输出
 - 如果还是无法编写出程序
