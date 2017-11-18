@@ -21,14 +21,14 @@
 - Bioconductor: ComplexHeatmap, clusterProfiler, ggtree
     - `source("..."); biocLite()`
 - Python: NumPy, SciPy, Pandas, Matplotlib, SciKit-Learn
-    - `pip insall`
+    - `pip`
 - Bioinformatics: BWA, Bowtie2, bedtools, samtools
     - `wget, make insall; git clone`
 
 ## 通用包管理系统——conda
-> Conda是开源的包管理系统和环境管理系统，可以安装软件包的多个版本和依赖，而且各环境可以很方便的切换。Conda支持Linux，Mac OS X和Windows系统。Conda主要为Python程序所创建，但是可以打包和分布任意软件。Conda有多个版本，包括Anaconda, Anaconda Server和Miniconda。
+> Conda是开源的包管理系统和环境管理系统，可以安装软件包的多个版本和依赖，而且各环境之间可以很方便得切换。Conda支持Linux，Mac OS X和Windows系统。Conda主要为Python程序所创建，但是可以打包和分布任意软件。Conda有多个版本，包括Anaconda, Anaconda Server和Miniconda。
 
-> Package, dependency and environment management for any language—Python, R, Ruby, Lua, Scala, Java, JavaScript, C/ C++, FORTRAN
+> Package, dependency and environment management for any language—Python, R, Ruby, Lua, Scala, Java, JavaScript, C/ C++, FORTRAN.
 
 > Conda is an open source package management system and environment management system that runs on Windows, macOS and Linux. Conda quickly installs, runs and updates packages and their dependencies. Conda easily creates, saves, loads and switches between environments on your local computer. It was created for Python programs, but it can package and distribute software for any language.
 
@@ -79,7 +79,7 @@ conda info
 
 ## 国内镜像——TUNA（清华）
 - `TUNA="https://mirrors.tuna.tsinghua.edu.cn"`
-- Annaconda
+- Anaconda
     ```{bash}
 conda config --add channels TUNA/anaconda/pkgs/main/
 conda config --add channels TUNA/anaconda/pkgs/free/
@@ -171,6 +171,7 @@ conda info --envs
 conda install --name py2 tophat
 source activate py2
 conda install tophat
+conda install/remove/... ...
 source deactivate py2
     ```
 
@@ -202,7 +203,7 @@ pip
 - Others
     1. 按要求进行安装
     2. ~~链接至CONDA/bin~~
-    3. 正常使用
+    3. 照常使用
 
 ## 参考资料
 - [Conda使用手册](https://conda.io/docs/)

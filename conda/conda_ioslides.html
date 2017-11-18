@@ -146,7 +146,7 @@
 <li>Python: NumPy, SciPy, Pandas, Matplotlib, SciKit-Learn
 
 <ul>
-<li><code>pip insall</code></li>
+<li><code>pip</code></li>
 </ul></li>
 <li>Bioinformatics: BWA, Bowtie2, bedtools, samtools
 
@@ -158,11 +158,11 @@
 </article></slide><slide class=''><hgroup><h2>通用包管理系统——conda</h2></hgroup><article  id="conda">
 
 <blockquote>
-<p>Conda是开源的包管理系统和环境管理系统，可以安装软件包的多个版本和依赖，而且各环境可以很方便的切换。Conda支持Linux，Mac OS X和Windows系统。Conda主要为Python程序所创建，但是可以打包和分布任意软件。Conda有多个版本，包括Anaconda, Anaconda Server和Miniconda。</p>
+<p>Conda是开源的包管理系统和环境管理系统，可以安装软件包的多个版本和依赖，而且各环境之间可以很方便得切换。Conda支持Linux，Mac OS X和Windows系统。Conda主要为Python程序所创建，但是可以打包和分布任意软件。Conda有多个版本，包括Anaconda, Anaconda Server和Miniconda。</p>
 </blockquote>
 
 <blockquote>
-<p>Package, dependency and environment management for any language—Python, R, Ruby, Lua, Scala, Java, JavaScript, C/ C++, FORTRAN</p>
+<p>Package, dependency and environment management for any language—Python, R, Ruby, Lua, Scala, Java, JavaScript, C/ C++, FORTRAN.</p>
 </blockquote>
 
 <blockquote>
@@ -230,7 +230,7 @@ conda config --add channels bioconda</pre></li>
 
 <ul>
 <li><code>TUNA=&quot;https://mirrors.tuna.tsinghua.edu.cn&quot;</code></li>
-<li><p>Annaconda</p>
+<li><p>Anaconda</p>
 
 <pre class = 'prettyprint lang-bash'>conda config --add channels TUNA/anaconda/pkgs/main/
 conda config --add channels TUNA/anaconda/pkgs/free/
@@ -334,6 +334,7 @@ conda create --name py2 python=2.7</pre>
 <pre class = 'prettyprint lang-bash'>conda install --name py2 tophat
 source activate py2
 conda install tophat
+conda install/remove/... ...
 source deactivate py2</pre></li>
 </ul>
 
@@ -369,7 +370,7 @@ pip</pre></li>
 <ol>
 <li>按要求进行安装</li>
 <li><del>链接至CONDA/bin</del></li>
-<li>正常使用</li>
+<li>照常使用</li>
 </ol></li>
 </ul>
 

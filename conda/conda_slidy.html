@@ -101,7 +101,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li>Python: NumPy, SciPy, Pandas, Matplotlib, SciKit-Learn
 <ul>
-<li><code>pip insall</code></li>
+<li><code>pip</code></li>
 </ul></li>
 <li>Bioinformatics: BWA, Bowtie2, bedtools, samtools
 <ul>
@@ -112,10 +112,10 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="conda" class="slide section level2">
 <h1>通用包管理系统——conda</h1>
 <blockquote>
-<p>Conda是开源的包管理系统和环境管理系统，可以安装软件包的多个版本和依赖，而且各环境可以很方便的切换。Conda支持Linux，Mac OS X和Windows系统。Conda主要为Python程序所创建，但是可以打包和分布任意软件。Conda有多个版本，包括Anaconda, Anaconda Server和Miniconda。</p>
+<p>Conda是开源的包管理系统和环境管理系统，可以安装软件包的多个版本和依赖，而且各环境之间可以很方便得切换。Conda支持Linux，Mac OS X和Windows系统。Conda主要为Python程序所创建，但是可以打包和分布任意软件。Conda有多个版本，包括Anaconda, Anaconda Server和Miniconda。</p>
 </blockquote>
 <blockquote>
-<p>Package, dependency and environment management for any language—Python, R, Ruby, Lua, Scala, Java, JavaScript, C/ C++, FORTRAN</p>
+<p>Package, dependency and environment management for any language—Python, R, Ruby, Lua, Scala, Java, JavaScript, C/ C++, FORTRAN.</p>
 </blockquote>
 <blockquote>
 <p>Conda is an open source package management system and environment management system that runs on Windows, macOS and Linux. Conda quickly installs, runs and updates packages and their dependencies. Conda easily creates, saves, loads and switches between environments on your local computer. It was created for Python programs, but it can package and distribute software for any language.</p>
@@ -173,7 +173,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1>国内镜像——TUNA（清华）</h1>
 <ul>
 <li><code>TUNA=&quot;https://mirrors.tuna.tsinghua.edu.cn&quot;</code></li>
-<li><p>Annaconda</p>
+<li><p>Anaconda</p>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">conda</span> config --add channels TUNA/anaconda/pkgs/main/
 <span class="kw">conda</span> config --add channels TUNA/anaconda/pkgs/free/
 <span class="kw">conda</span> config --set show_channel_urls yes</code></pre></div></li>
@@ -257,6 +257,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">conda</span> install --name py2 tophat
 <span class="kw">source</span> activate py2
 <span class="kw">conda</span> install tophat
+<span class="kw">conda</span> install/remove/... ...
 <span class="kw">source</span> deactivate py2</code></pre></div></li>
 </ul>
 </div>
@@ -287,7 +288,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <ol style="list-style-type: decimal">
 <li>按要求进行安装</li>
 <li><del>链接至CONDA/bin</del></li>
-<li>正常使用</li>
+<li>照常使用</li>
 </ol></li>
 </ul>
 </div>
