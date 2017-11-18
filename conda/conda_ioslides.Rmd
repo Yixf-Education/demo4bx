@@ -58,7 +58,7 @@ knitr::opts_chunk$set(eval=FALSE)
 ## conda：安装与配置
 1. 下载Miniconda(Python 3.6)
     ```{bash}
-get -c https://URLtoMiniconda/Miniconda3-latest-Linux-x86_64.sh
+wget -c https://URLtoMiniconda/Miniconda3-latest-Linux-x86_64.sh
     ```
 2. 安装Miniconda
     ```{bash}
@@ -192,16 +192,16 @@ source deactivate py2
 - 策略一：为特定工作创建“单元”环境
     ```{bash}
 conda create --name aligners
-conda activate aligners
+source activate aligners
 conda install bwa bowtie bowtie2 hisat2
-conda deactivate aligners
+source deactivate aligners
     ```
 - 策略二：为整个流程创建“流水线”环境
     ```{bash}
 conda create --name tuxedo
-conda activae tuxedo
+source activae tuxedo
 conda install samtools bowtie2 tophat cufflinks bioconductor-cummerbund
-conda deactivae tuxedo
+source deactivae tuxedo
     ```
 
 ## 特殊情况

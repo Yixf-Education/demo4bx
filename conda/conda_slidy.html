@@ -142,7 +142,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1>conda：安装与配置</h1>
 <ol style="list-style-type: decimal">
 <li><p>下载Miniconda(Python 3.6)</p>
-<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">get</span> -c https://URLtoMiniconda/Miniconda3-latest-Linux-x86_64.sh</code></pre></div></li>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">wget</span> -c https://URLtoMiniconda/Miniconda3-latest-Linux-x86_64.sh</code></pre></div></li>
 <li><p>安装Miniconda</p>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">bash</span> Miniconda3-latest-Linux-x86_64.sh</code></pre></div></li>
 <li><p>配置Miniconda：修改<code>.bashrc</code></p>
@@ -266,14 +266,14 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <ul>
 <li><p>策略一：为特定工作创建“单元”环境</p>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">conda</span> create --name aligners
-<span class="kw">conda</span> activate aligners
+<span class="kw">source</span> activate aligners
 <span class="kw">conda</span> install bwa bowtie bowtie2 hisat2
-<span class="kw">conda</span> deactivate aligners</code></pre></div></li>
+<span class="kw">source</span> deactivate aligners</code></pre></div></li>
 <li><p>策略二：为整个流程创建“流水线”环境</p>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">conda</span> create --name tuxedo
-<span class="kw">conda</span> activae tuxedo
+<span class="kw">source</span> activae tuxedo
 <span class="kw">conda</span> install samtools bowtie2 tophat cufflinks bioconductor-cummerbund
-<span class="kw">conda</span> deactivae tuxedo</code></pre></div></li>
+<span class="kw">source</span> deactivae tuxedo</code></pre></div></li>
 </ul>
 </div>
 <div class="slide section level2">
