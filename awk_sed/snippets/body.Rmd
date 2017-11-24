@@ -1,0 +1,312 @@
+
+## 资源共享
+![https://github.com/Yixf-Education/demo4bx](figures/qrcode.png)
+
+## 常见需求
+- 针对列
+    - 提取列
+    - 根据列进行筛选
+    - 指定/修改列间分隔符
+    - 列与列之间进行运算
+    - 根据列分割文件
+- 针对行
+    - 字符替换（全局或特定替换）
+    - 修改某（几）行
+    - 行前插入、行后追加
+    - 修改/删除/输出某（几）行
+
+## 准备工作——知己知彼：处理数据前先理解数据文件
+- 文件的基本属性（所有者、大小、创建及修改时间等）
+```{bash comment=NA}
+ls -lh $fi
+```
+- 文件类型（格式，换行符等）
+```{bash comment=NA}
+file $fi
+file score_win.txt
+```
+- 文件的总行数（数据量）
+```{bash comment=NA}
+wc -l $fi
+```
+- 文件的数据示例（文件头/中/尾）
+```{bash comment=NA}
+head -n 3 $fi
+head -n 100 $fi | tail -n 3
+tail -n 3 $fi
+```
+
+## AWK使用实例：提取列
+- 提取或者输出某一列
+```{bash comment=NA}
+awk '{print $4}' $fi | head -n 3
+```
+- 提取或者输出某几列
+```{bash comment=NA}
+awk '{print $1,$4}' $fi | head -n 3
+```
+- 提取或者输出所有列（一整行）
+```{bash comment=NA}
+awk '{print $0}' $fi | head -n 3
+```
+- 备忘笔记
+    * AWK语句包裹在`''`中
+    * 一整行用`$0`表示
+    * 使用`$1`, `$2`, `$3`, ...表示第一/二/三/……列
+
+## AWK使用实例：过滤行
+- 使用条件进行过滤，输出整行
+```{bash comment=NA}
+awk '$2>5000 && $3<9000' $fi
+```
+- 使用条件进行过滤，输出某列
+```{bash comment=NA}
+awk '($2>5000 && $3<9000) {print $4}' $fi
+```
+- 使用条件进行过滤，输出某列，添加行号
+```{bash comment=NA}
+awk '($1=="chrM" && $2>5000 && $3<9000) {print NR,$4}' $fi
+```
+- 备忘笔记
+    * 常用比较操作符: `==`, `!=`, `>`, `<`, `>=`, `<=`
+    * AWK的常用内置变量
+        * `FILENAME`：输入文件的文件名
+        * `FS`：输入文件（input）的字段（列）分隔符
+        * `OFS`：输出文件（Output）的字段（列）分隔符
+        * `RS`：输入文件（input）的记录（行）分隔符
+        * `ORS`：输出文件（Output）的记录（行）分隔符
+        * `NF`：（当前行的）字段数（列数）
+        * `NR`：（输入文件的）记录数（行数）
+
+## AWK使用实例：指定分隔符
+AWK默认的分隔符是制表符或空格，但可以灵活指定其他分隔符
+
+- 使用`FS`变量指定分隔符
+```{bash comment=NA}
+awk 'BEGIN{FS=":"} {print $1,$7}' /etc/passwd | tail -n 2
+```
+- 使用`-F`选项指定分隔符
+```{bash comment=NA}
+awk -F: '{print $1,$7}' /etc/passwd | tail -n 2
+```
+- 同时指定多个分隔符
+```{bash comment=NA}
+awk -F '[;:]' '{print $1,$7}' /etc/passwd | tail -n 2
+```
+- 设定输出分隔符
+```{bash comment=NA}
+awk -F '[;:]' '{print $1,$7}' OFS="\t" /etc/passwd | tail -n 2
+```
+
+## AWK使用实例：模式匹配过滤行
+- 针对某列使用模式匹配
+```{bash comment=NA}
+awk '$1 ~ /M/ {print NR,$1,$2,$3,$4}' OFS="\t" $fi | tail -n 3
+```
+- 针对整行使用模式匹配
+```{bash comment=NA}
+awk '/M/ {print NR,$1,$2,$3,$4}' OFS="\t" $fi | tail -n 3
+```
+- 针对某列模式匹配的取反 
+```{bash comment=NA}
+awk '$1 !~ /M/ {print NR,$1,$2,$3,$4}' OFS="\t" $fi | tail -n 3
+```
+- 针对整行模式匹配的取反 
+```{bash comment=NA}
+awk '!/M/ {print NR,$1,$2,$3,$4}' OFS="\t" $fi | tail -n 3
+```
+
+## AWK使用实例：分割文件
+- 根据某列分割文件（默认以列内容为文件名）
+```{bash comment=NA,eval=FALSE}
+awk '{print > $1}' $fi
+```
+- 指定输出文件的前缀与后缀
+```{bash comment=NA,eval=FALSE}
+awk '{print > "hg38_"$1".bed"}' $fi
+```
+- 分割文件的同时选择列
+```{bash comment=NA,eval=FALSE}
+awk '{print $1,$4,$6 > $1}' $fi
+```
+- 使用`if-else`进行复杂分割
+```{bash comment=NA,eval=FALSE}
+awk '{if($4 ~ /NM|XM/) print > "coding.txt"; 
+     else if($4 ~ /NR|XR/) print > "noncoding.txt";
+     else print > "others.txt" }' $fi
+```
+
+## AWK使用实例：数学运算
+- 计算基因的长度
+```{bash comment=NA}
+awk '{len=$3-$2;} {print $4,len}' $fi | head -n 3
+```
+- 计算所有基因的总长度
+```{bash comment=NA}
+head -n 3 $fi | awk '{len=$3-$2;sum+=len;print $4,len} END {print "Total",sum}'
+```
+- 计算每条染色体上的基因数目
+```{bash comment=NA}
+awk '{a[$1]++;} END {for (i in a) print i ": " a[i];}' $fi
+```
+
+## AWK使用实例：使用AWK脚本
+1. 理解输入数据
+```{bash comment=NA}
+#cat score.txt
+awk '{print}' OFS="\t" score.txt
+```
+2. 撰写脚本`cal.awk`
+```{bash eval=FALSE}
+#!/bin/awk
+#Before running each line
+BEGIN {
+    math = 0
+    english = 0
+    computer = 0
+    printf "NAME    NO.   MATH  ENGLISH  COMPUTER   TOTAL\n"
+    printf "---------------------------------------------\n"
+}
+#Runing each line
+{
+    math+=$3
+    english+=$4
+    computer+=$5
+    printf "%-6s %-6s %4d %8d %8d %8d\n", $1, $2, $3, $4, $5, $3+$4+$5
+}
+#After running each line
+END {
+    printf "---------------------------------------------\n"
+    printf "  TOTAL:%10d %8d %8d \n", math, english, computer
+    printf "AVERAGE:%10.2f %8.2f %8.2f\n", math/NR, english/NR, computer/NR
+}
+```
+3. 使用脚本
+```{bash comment=NA}
+awk -f cal.awk score.txt
+```
+
+## 参考资料
+* [AWK简明教程](http://coolshell.cn/articles/9070.html)
+* [The GNU Awk User’s Guide](https://www.gnu.org/software/gawk/manual/gawk.html)
+* `man awk`, `awk -h`, `awk --help`
+* *Effective awk Programming: Universal Text Processing and Pattern Matching*
+
+
+## sed使用实例：替换
+- 把`chrM`替换为`chrMt`
+```{bash comment=NA}
+sed "s/chrM/chrMt/g" $fi | head -n 3
+```
+- 把替换后的数据保存到文件
+```{bash comment=NA,eval=FALSE}
+sed "s/chrM/chrMt/g" $fi > mt.bed
+```
+- 直接在原文件中进行替换修改（**谨慎使用**）
+```{bash comment=NA,eval=FALSE}
+#sed -i "s/chrM/chrMt/g" $fi
+```
+- 修改每行的开头与结尾
+```{bash comment=NA}
+sed "s/^/#/g" $fi | head -n 3
+sed "s/$/###/g" $fi | head -n 3
+```
+- 只在某一行中进行替换
+```{bash comment=NA}
+sed "2s/chrM/chrMt/g" $fi | head -n 3
+```
+- 在某些行中进行替换
+```{bash comment=NA}
+sed "2,4s/chrM/chrMt/g" $fi | head -n 5
+```
+- 只替换第一次出现
+```{bash comment=NA}
+sed "s/0/X/1" $fi | head -n 1
+```
+- 只替换第二次出现
+```{bash comment=NA}
+sed "s/0/X/2" $fi | head -n 1
+```
+- 只替换第三次及其后的出现
+```{bash comment=NA}
+sed "s/0/X/3g" $fi | head -n 1
+```
+- 备忘笔记：正则表达式
+    * `^`：行首
+    * `$`：行尾
+    * `\<`：词首
+    * `\>`：词尾
+    * `.`：单个字符
+    * `*`：零次或多次
+    * `[]`：字符集
+
+## sed使用实例：多次匹配与替换
+- 同时进行多种替换
+```{bash comment=NA}
+sed "1,2s/chrM/chrMt/; 4,5s/chrM/M/" $fi | head -n 5
+```
+- 另一种写法——使用`-e`选项
+```{bash comment=NA}
+sed -e "1,2s/chrM/chrMt/" -e "4,5s/chrM/M/" $fi | head -n 5
+```
+- 使用`&`代表被匹配对象
+```{bash comment=NA}
+sed "s/\+/(&)/g" $fi | head -n 2
+```
+- 使用`()`进行分组，然后使用`\1`、`\2`、`\3`等变量指代被匹配对象
+```{bash comment=NA}
+sed "s/^\(chr\w\+\)\s\+\([[:digit:]]\+\)\s\+\([[:digit:]]\+\).\+\([+-]\).\+$/\1:\2-\3:\4/" $fi | head -n 3
+```
+
+## sed使用实例：常用命令
+- 使用`i`（insert）进行插入
+```{bash comment=NA}
+sed "1 i #This is a BED file" $fi | head -n 3
+```
+- 使用`a`（append）进行追加
+```{bash comment=NA}
+sed "1 a #The following is a BED line" $fi | head -n 3
+```
+* 配合模式匹配进行追加
+```{bash comment=NA}
+sed "/chrM/ a #The gene above is on chromosome M" $fi | head -n 6
+```
+- 使用`c`（change）进行修改
+```{bash comment=NA}
+sed "/chrM/ c #chrM lines are commented" $fi | head -n 3
+```
+- 使用`d`（delete）进行删除
+```{bash comment=NA}
+sed "/chrM/ d" $fi | head -n 3
+```
+- 使用`p`（print）进行输出
+```{bash comment=NA}
+sed -n "/chrM/ p" $fi | head -n 3
+```
+* 使用模式匹配进行定位
+```{bash comment=NA}
+sed -n "/chrM/,/chrY/ p" $fi | tail -n 3
+```
+* 混合使用行号与模式匹配
+```{bash comment=NA}
+sed -n "10,/chrY/ p" $fi | tail -n 3
+```
+* 修改匹配行及其后的数行
+```{bash comment=NA}
+sed "/3306/,+2 s/^/#/g" $fi | head -n 5
+```
+- 条件嵌套
+```{bash comment=NA}
+sed "10,15 {/chrY/{/NR/d}}" $fi | head -n 15 | tail -n 5
+```
+- 命令组合
+```{bash comment=NA}
+sed "1,15 {/chrM/d;s/\+/+1/g}" $fi | head -n 3
+```
+
+## 参考资料
+- [sed简明教程](http://coolshell.cn/articles/9104.html)
+- [sed, a stream editor](https://www.gnu.org/software/sed/manual/sed.html)
+- `man sed`, `sed --help`
+- *sed \＆ awk: UNIX Power Tools*
+- *sed and awk Pocket Reference: Text Processing with Regular Expressions*
