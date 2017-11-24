@@ -1,0 +1,415 @@
+---
+title: "tidyverse使用实例演示"
+subtitle: "R里面的生物数据分析"
+author: "伊现富(Yi Xianfu)"
+date: '2017-11-25'
+output:
+  slidy_presentation: default
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(eval=TRUE)
+Sys.setenv(fi='gene_hg38_chrM_chrY.bed')
+```
+
+## 资源共享
+![https://github.com/Yixf-Education/demo4bx](figures/qrcode.png)
+
+
+# 数据分析前的准备工作：三思而后行
+* 你拥有什么？
+    * 文件里面存储的什么数据？
+    * 行代表什么含义？
+    * 每一列代表什么含义？
+* 你想要什么？
+    * 你想要哪些行？
+    * 你想要哪些列？
+    * 你想基于原始数据获得哪些信息？
+
+# 数据分析前的准备工作：把生物学数据转换成计算机语言
+* 理解数据文件
+    * 行：观测对象或记录
+    * 列：具体变量
+* 理解分析内容
+    * 处理行：过滤（filter）记录
+    * 处理列：选择（select）变量
+    * 整理数据
+        * 按列进行排序（arrange）
+        * 添加新列（mutate）
+        * 其他操作：分组，信息汇总, 变量重命名，数据间的交互，...
+
+# 数据分析前的准备工作：选择工具
+* R （其他选择：Python，Perl，shell，...）
+* RStudio
+* tidyverse
+    * readr：读取、保存数据
+    * tidyr：清理数据
+    * dplyr：数据变换
+    * stringr：字符串操作
+    * ggplot2：绘图展示
+
+# 数据分析：载入包
+- 如果`tidyverse`还没有安装，请先安装
+- 如果`tidyverse`已经安装，直接载入
+```{r, message=FALSE, warning=TRUE}
+library(tidyverse)
+#library(readr)
+#library(tidyr)
+#library(dplyr)
+#library(ggplot2)
+#library(stringr)
+# 为便于管理数据，创建输出文件夹
+dir.create("output_r", showWarnings=FALSE)
+```
+
+# 数据分析A：输入数据——Pgen
+- 读入并理解数据
+```{r}
+library(readxl)
+pgen <- read_excel("pgen.xlsx")
+#pgen <- read_tsv("pgen.tsv")
+kable(pgen[1:5,], format="html") %>% 
+  kable_styling(bootstrap_options=c("striped", "hover", "condensed", "responsive"), full_width=FALSE, position="left")
+#View(pgen)
+glimpse(pgen)
+str(pgen)
+summary(pgen)
+head(pgen)
+tail(pgen)
+sample_n(pgen, 10)
+```
+- 对于任何一个函数，都可以通过阅读它的帮助手册来学习其使用方法
+```{r, eval=FALSE}
+?str
+?glimpse
+```
+
+# 数据数据A：明确任务
+1. 仅保留SNP记录，丢弃CNV记录
+2. 丢弃某些变量，重排剩余变量，同时把chromosome整理成`chrN`的格式
+3. 根据distanceTSS变量（20kb，50kb）将记录进行分组
+4. 比较不同组之间的rho值
+
+# 数据分析A：步步为营
+```{r, message=FALSE}
+# 指定输出目录
+dir_out <- "output_r"
+# 修改变量名便于后续使用
+pgen.0 <- pgen %>% rename(posSNP=`posSNP(hg18)`, posTSS=`posTSS(hg18)`)
+# 过滤SNP记录
+pgen.1 <- pgen.0 %>% filter(str_detect(SNP, "^rs"))
+# 按需选择特定变量，同时修改chromosome的格式
+pgen.2 <- pgen.1 %>% select(SNP, gene, chr=chrSNP, posSNP:pvalue) %>% mutate(chr=paste0("chr", chr))
+# 根据distanceTSS变量进行分组
+pgen.3 <- pgen.2 %>% mutate(group=ifelse(distanceTSS>=50000, "Large", ifelse(distanceTSS>=20000, "Middle", "Small")))
+# 展示数据
+kable(pgen.3[1:5,], format="html") %>%
+  kable_styling(bootstrap_options=c("striped", "hover", "condensed", "responsive"), full_width=FALSE, position="left")
+# 保存整理修改后的数据
+write_tsv(pgen.3, file.path(dir_out, "pgen_brief.tsv"))
+# 图形化比较不同组之间的rho值
+ggplot(pgen.3, aes(group, rho, color=group)) + geom_boxplot()
+# 保存图片
+ggsave(file.path(dir_out, "pgen_rho.png"))
+```
+
+# 数据分析A：一步到位
+除了上述“步步为营”的处理方式外，也可以采用“一步到位”的处理方式：
+
+* 像流水线一样从原始输入直接到最终输出
+* 不使用中间变量从而节省计算资源
+* 便于提取整理成函数（function）利于重用
+
+```{r}
+pgen %>% rename(posSNP=`posSNP(hg18)`, posTSS=`posTSS(hg18)`) %>% 
+  filter(str_detect(SNP, "^rs")) %>% 
+  select(SNP, gene, chr=chrSNP, posSNP:pvalue) %>% mutate(chr=paste0("chr", chr)) %>% 
+  mutate(group=ifelse(distanceTSS>=50000, "Large", ifelse(distanceTSS>=20000, "Middle", "Small"))) %>%
+  ggplot(aes(group, rho, color=group)) + geom_boxplot()
+```
+
+# 数据分析A：Perl版本
+Perl程序进行逐行处理，所以一定要提前对数据分析有个整体把握！
+```{perl, eval=FALSE}
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+my $dir_out = "output_perl";
+mkdir $dir_out unless -d $dir_out;
+my $fi      = "pgen.tsv";
+my $fo      = "$dir_out/pgen_brief.tsv";
+open my $I, '<', $fi or die "$0 : failed to open input file '$fi' : $!\n";
+open my $O, '>', $fo or die "$0 : failed to open output file '$' : $!\n";
+select $O;
+print join "\t", "SNP", "gene", "chr", "posSNP", "posTSS", "distanceTSS", "rho", "pvalue", "group";
+print "\n";
+
+while (<$I>) {
+    if (/^rs\d+/) {
+        my @fields = split /\t/;
+        my $chr    = "chr" . $fields[3];
+        my $group =
+          $fields[7] >= 50000
+          ? "Large"
+          : ( $fields[7] >= 20000 ? "Middle" : "Small" );
+        print join "\t", $fields[0], $fields[2], $chr, @fields[ 5 .. 9 ], $group;
+        print "\n";
+    }
+}
+close $I or warn "$0 : failed to close input file '$fi' : $!\n";
+close $O or warn "$0 : failed to close output file '$' : $!\n";
+```
+
+# 数据分析B：输入数据——Genes
+- 读入并理解数据
+```{r}
+genes <- read_tsv("genes.tsv")
+kable(genes[1:5,], format="html") %>% 
+  kable_styling(bootstrap_options=c("striped", "hover", "condensed", "responsive"), full_width=FALSE, position="left")
+glimpse(genes)
+summary(genes)
+```
+# 数据分析：明确任务
+1. 丢弃NCBI/HGNC/Ensembl ID为`NA`的记录
+2. 仅保留以下变量：PharmGKB, NCBI, Name, Symbol, Chr, Start, End
+3. 基于Start和End变量计算长度（Length）
+4. 对变量进行重排
+5. 绘制Length分布图
+6. 比较不同染色体之间的数目差异
+    * 数据：按数目从多到少对染色体进行排序
+    * 绘图
+    * 保存：数据+绘图
+
+# 数据分析B：步步为营
+```{r, message=FALSE}
+# 指定输出目录
+dir_out <- "output_r"
+# 修改变量名便于后续使用
+genes.0 <- genes %>% rename(PharmGKB=`PharmGKB Accession Id`, NCBI=`NCBI Gene ID`, HGNC=`HGNC ID`, Ensembl=`Ensembl Id`, AltName=`Alternate Names`, AltSym=`Alternate Symbols`, Vip=`Is VIP`, Annotate=`Has Variant Annotation`, Ref=`Cross-references`, Guide=`Has CPIC Dosing Guideline`, Chr=Chromosome, Start=`Chromosomal Start`, End=`Chromosomal Stop`)
+#ens_err <- genes.0 %>% filter(!str_detect(Ensembl, "^E\\w+\\d$") | is.na(Ensembl))
+# 丢弃NCBI/HGNC/Ensembl ID为`NA`的记录
+genes.1 <- genes.0 %>% drop_na(NCBI, HGNC, Ensembl)
+# 按需保留变量
+genes.2 <- genes.1 %>% select(PharmGKB, NCBI, Name, Symbol, Chr, Start, End)
+# 基于Start和End计算长度
+genes.3 <- genes.2 %>% mutate(Length=End-Start)
+# 重排变量顺序
+genes.4 <- genes.3 %>% select(PharmGKB, NCBI, Symbol:Length, Name)
+# 展示数据
+kable(genes.4[1:5,], format="html") %>%
+  kable_styling(bootstrap_options=c("striped", "hover", "condensed", "responsive"), full_width=FALSE, position="left")
+# 保存数据
+write_tsv(genes.4, file.path(dir_out, "genes_brief.tsv"))
+# 绘图展示长度分布
+ggplot(genes.4, aes(Length)) + geom_density()
+# 保存绘图
+ggsave(file.path(dir_out, "length_distribution.png"))
+# 绘图展示染色体间的数目差异
+ggplot(genes.4, aes(Chr)) + geom_bar()
+# 保存绘图
+ggsave(file.path(dir_out, "chr_number_barplot.png"))
+# 按照数目从多到少对染色体进行排序
+chr_count <- genes.4 %>% group_by(Chr) %>% summarise(Count=n()) %>% arrange(desc(Count))
+# 展示数据
+kable(chr_count[1:5,], format="html") %>% 
+  kable_styling(bootstrap_options=c("striped", "hover", "condensed", "responsive"), full_width=FALSE, position="left")
+# 保存数据
+write_tsv(chr_count, file.path(dir_out, "genes_chr_number.tsv"))
+```
+
+# 数据分析B：一步到位
+```{r}
+genes %>% rename(PharmGKB=`PharmGKB Accession Id`, NCBI=`NCBI Gene ID`, HGNC=`HGNC ID`, Ensembl=`Ensembl Id`, AltName=`Alternate Names`, AltSym=`Alternate Symbols`, Vip=`Is VIP`, Annotate=`Has Variant Annotation`, Ref=`Cross-references`, Guide=`Has CPIC Dosing Guideline`, Chr=Chromosome, Start=`Chromosomal Start`, End=`Chromosomal Stop`) %>% 
+  drop_na(NCBI, HGNC, Ensembl) %>% 
+  select(PharmGKB, NCBI, Name, Symbol, Chr, Start, End) %>% 
+  mutate(Length=End-Start) %>% 
+  select(PharmGKB, NCBI, Symbol:Length, Name) %>% 
+  ggplot(aes(Chr)) + geom_bar()
+```
+
+# 数据分析B：Perl版本
+```{perl, eval=FALSE}
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+my $dir_out    = "output_perl";
+mkdir $dir_out unless -d $dir_out;
+my $file_genes = "genes.tsv";
+my $file_out   = "$dir_out/genes_brief.tsv";
+open my $I, '<', $file_genes or die "$0 : failed to open input file '$file_genes' : $!\n";
+open my $O, '>', $file_out or die "$0 : failed to open output file '$file_out' : $!\n";
+select $O;
+print join "\t", "PharmGKB", "NCBI", "Symbol", "Chr", "Start", "End", "Length", "Name";
+print "\n";
+my %number;
+
+while (<$I>) {
+    chomp;
+    unless (/^Pham/) {
+        my @fields = split /\t/;
+        if ( $fields[1] =~ /\d/ && $fields[2] =~ /\d/ && $fields[3] =~ /\w/ ) {
+            my $length = $fields[-1] - $fields[-2];
+            $number{ $fields[-3] }++;
+            print join "\t", @fields[ 0, 1, 5, -3, -2, -1 ], $length, $fields[4];
+            print "\n";
+        }
+    }
+}
+close $I or warn "$0 : failed to close input file '$file_genes' : $!\n";
+close $O or warn "$0 : failed to close output file '$file_out' : $!\n";
+
+my $file_number = "$dir_out/genes_chr_num.tsv";
+open my $ON, '>', $file_number or die "$0 : failed to open output file '$file_number' : $!\n";
+select $ON;
+print "Chr\tCount\n";
+foreach my $key ( sort { $number{$b} <=> $number{$a} } keys %number ) {
+    print "$key\t$number{$key}\n";
+}
+close $ON or warn "$0 : failed to close output file '$file_number' : $!\n";
+```
+
+# 数据分析C：输入数据——Phewas
+- 读入并理解数据
+```{r}
+phewas <- read_csv("phewas.csv", na=c("", "NA", "NULL"))
+kable(phewas[1:5,], format="html") %>%
+  kable_styling(bootstrap_options=c("striped", "hover", "condensed", "responsive"), full_width=FALSE, position="left")
+glimpse(phewas)
+summary(phewas)
+```
+
+# 数据分析C：明确任务
+1. 丢弃位置信息缺失或者基因名（gene）为`NULL`的记录
+2. 把染色体和位置从一个变量分割为两个变量，同时把染色体整理成"chrN"的格式
+3. 仅保留case number超过100、且odds ratio大于1的记录
+4. 按需选择变量，并进行重排
+5. 找到含有最多SNP、排名前15的基因
+    1. 计算每个基因上的SNP数目
+    2. 根据数目选在排名前15的基因
+    3. 补充这些基因的SNP具体信息
+
+# 数据分析C：步步为营
+```{r}
+# 指定输出目录
+dir_out <- "output_r"
+# 修改变量名便于后续使用
+phewas.0 <- phewas %>% rename(chrom=chromosome, phenotype=`phewas phenotype`, pvalue=`p-value`, ratio=`odds-ratio`, gene=gene_name, code=`phewas code`, gwas=`gwas-associations`)
+# 丢弃位置信息缺失或者基因名为`NULL`的记录
+phewas.1 <- phewas.0 %>% filter(str_detect(chrom, "\\w\\s\\d")) %>% drop_na(gene)
+# 分割染色体和位置信息，同时把染色体整理成"chrN"的格式
+phewas.2 <- phewas.1 %>% separate(chrom, into=c("chr", "pos")) %>% mutate(chr=paste0("chr", chr))
+# 仅保留case number超过100、且odds ratio大于1的记录
+phewas.3 <- phewas.2 %>% filter(cases>=100 & ratio>=1)
+# 选择并重排所需变量
+phewas.4 <- phewas.3 %>% select(chr:snp, cases:gene, phenotype, gwas)
+# 展示数据
+kable(phewas.4[1:5,], format="html") %>%
+  kable_styling(bootstrap_options=c("striped", "hover", "condensed", "responsive"), full_width=FALSE, position="left")
+# 保存数据
+write_csv(phewas.4, file.path(dir_out, "phewas_brief.csv"))
+# 找到含有最多SNP、排名前15的基因
+gene_snp <- phewas.4 %>% group_by(gene) %>% summarise(number=n()) %>% top_n(15, number) %>% arrange(desc(number))
+# 展示数据
+kable(gene_snp[1:5,], format="html") %>%
+  kable_styling(bootstrap_options=c("striped", "hover", "condensed", "responsive"), full_width=FALSE, position="left")
+# 保存数据
+# 补充这些基因的SNP具体信息
+top15_gene <- inner_join(phewas.4, gene_snp) %>% arrange(desc(number))
+# 展示数据
+kable(top15_gene[1:5,], format="html") %>%
+  kable_styling(bootstrap_options=c("striped", "hover", "condensed", "responsive"), full_width=FALSE, position="left")
+# 保存数据
+write_csv(top15_gene, file.path(dir_out, "top15_gene.csv"))
+```
+
+# 数据分析C：一步到位
+```{r}
+phewas.brief <- phewas %>% rename(chrom=chromosome, phenotype=`phewas phenotype`, pvalue=`p-value`, ratio=`odds-ratio`, gene=gene_name, code=`phewas code`, gwas=`gwas-associations`) %>%
+  filter(str_detect(chrom, "\\w\\s\\d")) %>% drop_na(gene) %>% 
+  separate(chrom, into=c("chr", "pos")) %>% mutate(chr=paste0("chr", chr)) %>% 
+  filter(cases>=100 & ratio>=1) %>% 
+  select(chr:snp, cases:gene, phenotype, gwas)
+top15_gene <- phewas.brief %>% group_by(gene) %>% summarise(number=n()) %>% top_n(15, number) %>% 
+  inner_join(phewas.brief, .) %>% arrange(desc(number))
+
+```
+
+# 数据分析C：Perl版本
+```{perl, eval=FALSE}
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+use Text::CSV;
+my $csv = Text::CSV->new( { binary => 1 } ) or die "Cannot use CSV: " . Text::CSV->error_diag();
+
+my $dir_out  = "output_perl";
+mkdir $dir_out unless -d $dir_out;
+my $file_in  = "phewas.csv";
+my $file_out = "$dir_out/phewas_brief.csv";
+open my $I, '<:encoding(utf8)', $file_in or die "$0 : failed to open input file '$file_in' : $!\n";
+open my $O, '>:encoding(utf8)', $file_out or die "$0 : failed to open output file '$' : $!\n";
+my @header;
+push @header, "chr", "pos", "snp", "cases", "pvalue", "ratio", "gene", "pehnotype", "gwas";
+$csv->say( $O, \@header );
+my %gene;
+
+while ( my $row = $csv->getline($I) ) {
+    my @fields = @$row;
+    if ( $fields[0] =~ /\w\s\d/ && $fields[6] ne "NULL" ) {
+        if ( $fields[3] >= 100 && $fields[5] >= 1 ) {
+            my ( $chr, $pos ) = split /\s+/, $fields[0];
+            $chr = "chr" . $chr;
+            my $value = join "\t", $chr, $pos, $fields[1], @fields[ 3 .. 6 ], $fields[2], $fields[-1];
+            my @record = split /\t/, $value;
+            $csv->say( $O, \@record );
+            push @{ $gene{ $fields[6] } }, $value;
+        }
+    }
+}
+$csv->eof or $csv->error_diag();
+close $I  or warn "$0 : failed to close input file '$file_in' : $!\n";
+close $O  or warn "$0 : failed to close output file '$file_out' : $!\n";
+
+my $file_gene = "$dir_out/top15_gene.csv";
+open my $G, '>:encoding(utf8)', $file_gene or die "$0 : failed to open output file '$file_gene' : $!\n";
+push @header, "number";
+$csv->say( $G, \@header );
+my $i = 15;
+foreach my $key ( sort { @{ $gene{$b} } <=> @{ $gene{$a} } } keys %gene ) {
+    if ( $i > 0 ) {
+        foreach my $snp ( @{ $gene{$key} } ) {
+            my @record = split /\t/, $snp;
+            push @record, scalar( @{ $gene{$key} } );
+            $csv->say( $G, \@record );
+        }
+    }
+    $i--;
+}
+close $G or warn "$0 : failed to close output file '$file_gene' : $!\n";
+```
+
+# 数据分析后的整理工作：保存会话（session）信息
+一定要养成保存会话信息的好习惯，便于：
+
+- 日后检查
+- 工作重复
+- 调试bug
+- 其他想不到却至关重要的工作
+```{r}
+sessionInfo()
+```
+
+# 参考资料
+- [tidyverse官网](https://www.tidyverse.org/)
+- [The tidy tools manifesto](https://cran.r-project.org/web/packages/tidyverse/vignettes/manifesto.html)
+- [Introduction to dplyr](https://cran.r-project.org/web/packages/dplyr/vignettes/dplyr.html)
+- [Two-table verbs](https://cran.r-project.org/web/packages/dplyr/vignettes/two-table.html)
+- [dplyr tutorial](http://genomicsclass.github.io/book/pages/dplyr_tutorial.html)

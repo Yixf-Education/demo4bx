@@ -1,0 +1,22 @@
+---
+title: "tidyverse使用实例演示"
+subtitle: "R里面的生物数据分析"
+author: "伊现富(Yi Xianfu)"
+date: '2017-11-25'
+header-includes:
+  - \usepackage{ctex}
+fontsize: 10pt
+output:
+  beamer_presentation:
+    latex_engine: xelatex
+    theme: AnnArbor
+    colortheme: dolphin
+    fonttheme: structurebold
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(eval=TRUE)
+Sys.setenv(fi='gene_hg38_chrM_chrY.bed')
+```
